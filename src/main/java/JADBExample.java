@@ -3,8 +3,6 @@ import se.vidstige.jadb.JadbDevice;
 import se.vidstige.jadb.JadbException;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
 
 public class JADBExample {
 
@@ -17,51 +15,56 @@ public class JADBExample {
             JadbConnection jadb = new JadbConnection();
             JadbDevice device = jadb.getDevices().get(0);
 
+
             // Exemple d'envoi de SMS (il faut une carte SIM donc sur VM ça ne marche pas)
-            // sendSMS(device, "0782239208", "Ceci\\ est\\ un\\ exemple\\ de\\ SMS\\ envoy\u00e9\\ via\\ JADB.");
+            // System.out.println("Envoi d'un SMS"); sendSMS(device, "0782239208", "Ceci\\ est\\ un\\ exemple\\ de\\ SMS\\ envoy\u00e9\\ via\\ JADB.");
 
             // Exemple d'extraction des SMS
-            // extractSMS(device, "sms.txt");
+            // System.out.println("Extraction des SMS"); extractSMS(device, "sms.txt");
 
             // Exemple d'appel téléphonique sortant
-            // makePhoneCall(device, "0782239208");
+            // System.out.println("Appel téléphonique sortant"); makePhoneCall(device, "0782239208");
 
-            // Exemple de réponse à un appel
-            // answerPhoneCall(device);
+            // Exemple pour décrocher à un appel
+            // System.out.println("Décrocher à un appel"); answerPhoneCall(device);
 
-            // Exemple de fin d'appel (il faut un appel en cours)
-            // endPhoneCall(device);
+            // Exemple de fin d'appel ou de refus d'appel (il faut un appel en cours)
+            // System.out.println("Fin d'appel ou refus d'appel"); endPhoneCall(device);
+
+            // Exemple de récupération des notifications d'appel
+            System.out.println("Récupération des notifications d'appel"); getNotificationCall(device);
 
             // Exemple de récupération des contacts
-            // extractContacts(device, "contacts.txt");
+            // System.out.println("Récupération des contacts"); extractContacts(device, "contacts.txt");
+
+            // Exemple de recherche de contact par numéro
+            // System.out.println("Recherche de contact par numéro"); contactSearchByNumber(device, "0782239208");
 
             // Fermez le serveur ADB à la fin de votre programme
             closeADBServer();
 
 // En cours de développement --------------------------------------------------------------------------------
-            // Exemple d'extraction des notifications
-            // getNotificationsCall(device);
-
             // Exemple d'ajout d'un contact
-            // addContact("Jean Louis", "11 11 11 11 11");
+            // System.out.println("Ajout d'un contact"); addContact("Jean Louis", "11 11 11 11 11");
 
         } catch (IOException | JadbException | InterruptedException e) {
             System.out.println(e.getMessage());
         }
     }
-
+    // Module serveur ADB --------------------------------------------------------------------------------------
     public static void startADBServer() throws IOException, InterruptedException {
-        System.out.println("Test startADBServer");
+        System.out.println("StartADBServer");
         Process process = Runtime.getRuntime().exec("adb start-server");
         process.waitFor();
     }
     public static void closeADBServer() throws IOException, InterruptedException {
-        System.out.println("Test closeADBServer");
+        System.out.println("CloseADBServer");
         Process process = Runtime.getRuntime().exec("adb kill-server");
         process.waitFor();
     }
+
+    // Module SMS ------------------------------------------------------------------------------------------------
     public static void sendSMS(JadbDevice device, String phoneNumber, String message) throws IOException {
-        System.out.println("Test sendSMS");
         String serialNumber = device.getSerial();
 
         ProcessBuilder processBuilder = new ProcessBuilder(
@@ -77,7 +80,6 @@ public class JADBExample {
         }
     }
     public static void extractSMS(JadbDevice device, String fileName) {
-        System.out.println("Extracting SMS to file");
         try {
             String serialNumber = device.getSerial();
             ProcessBuilder processBuilder = new ProcessBuilder("adb", "-s", serialNumber, "shell", "content", "query", "--uri", "content://sms");
@@ -88,8 +90,9 @@ public class JADBExample {
             System.out.println(e.getMessage());
         }
     }
+
+    // Module Appel -----------------------------------------------------------------------------------------------
     public static void makePhoneCall(JadbDevice device, String phoneNumber) throws IOException {
-        System.out.println("Test makePhoneCall");
         String serialNumber = device.getSerial();
         Process process;
         try {
@@ -100,7 +103,6 @@ public class JADBExample {
         }
     }
     public static void answerPhoneCall(JadbDevice device) throws IOException {
-        System.out.println("Test answerPhoneCall");
         String serialNumber = device.getSerial();
         Process process;
         try {
@@ -111,7 +113,6 @@ public class JADBExample {
         }
     }
     public static void endPhoneCall(JadbDevice device) throws IOException {
-        System.out.println("Test endPhoneCall");
         String serialNumber = device.getSerial();
         Process process;
         try {
@@ -122,8 +123,63 @@ public class JADBExample {
             System.out.println(e.getMessage());
         }
     }
+    public static void getNotificationCall(JadbDevice device) {
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder("adb", "-s", device.getSerial(), "shell", "dumpsys", "telephony.registry", "|", "grep", "-E", "mCallState");
+            processBuilder.redirectErrorStream(true);
+            Process process = processBuilder.start();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String status = reader.readLine();
+            System.out.println(status);
+            if (status != null && status.contains("=")) {
+                status = status.substring(status.indexOf("=") + 1).trim();
+            }
+
+            if ( status.equals("2") ) {
+                System.out.println("Appel en cours");
+            } else if ( status.equals("1") ) {
+                System.out.println("Appel sortant");
+                processBuilder = new ProcessBuilder("adb", "-s", device.getSerial(), "shell", "dumpsys", "telephony.registry", "|", "grep", "-E", "mCallIncomingNumber");
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+
+                reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                String number = reader.readLine();
+                System.out.println(number);
+                if (number != null && number.contains("=")) {
+                    number = number.substring(number.indexOf("=") + 1).trim();
+                }
+
+                process.waitFor();
+                reader.close();
+
+                String ret = contactSearchByNumber(device, number);
+                String[] lines = ret.split("\n");
+                for (String line : lines) {
+                    if (line.contains("display_name=")) {
+                        int startIndex = line.indexOf("display_name=") + "display_name=".length();
+                        int endIndex = line.indexOf(',', startIndex);
+                        String nameAndLastName = line.substring(startIndex, endIndex);
+                        System.out.println("\tNom et prénom : " + nameAndLastName);
+                    }
+                }
+
+            } else if ( status.equals("2") ) {
+                System.out.println("Appel en cours");
+            } else {
+                System.out.println("Aucun appel");
+                process.waitFor();
+                reader.close();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+    // Module Contacts --------------------------------------------------------------------------------------------
     public static void extractContacts(JadbDevice device, String fileName) {
-        System.out.println("Test saveContactsToFile");
         try {
             String serialNumber = device.getSerial();
             Process process = Runtime.getRuntime().exec("adb -s " + serialNumber +
@@ -144,39 +200,23 @@ public class JADBExample {
             System.out.println(e.getMessage());
         }
     }
-
-// En cours de développement --------------------------------------------------------------------------------
-    public static void getNotificationsCall(JadbDevice device) throws IOException {
-        List<String> notifications = new ArrayList<>();
-        // Exécutez les commandes ADB pour obtenir les notifications et ajoutez-les à la liste
-        try {
-            String command = "adb -s " + device.getSerial() + " shell";
-            Process process = Runtime.getRuntime().exec(command);
-            process.waitFor();
-
-            command = "dumpsys notification --noredact | grep contentIntent -A 5";
-            process = Runtime.getRuntime().exec(command);
-            process.waitFor();
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+    public static String contactSearchByNumber( JadbDevice device, String phoneNumber) {
+        extractContacts(device, "contacts.txt");
+        try (BufferedReader reader = new BufferedReader(new FileReader("contacts.txt"))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                notifications.add(line);
-            }
-
-            // Affichez les notifications
-            for (String notification : notifications) {
-                System.out.println(notification);
+                if (line.contains(phoneNumber)) {
+                    return line;
+                }
             }
         } catch (IOException e) {
             System.out.println(e.getMessage());
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
+        return "Numéro inconnu";
     }
-    public static void addContact(String name, String phoneNumber)
-    {
-        System.out.println("Adding contact");
+
+// En cours de développement --------------------------------------------------------------------------------
+    public static void addContact(String name, String phoneNumber) {
         try {
             Process process = Runtime.getRuntime().exec("adb shell am start -a android.intent.action.INSERT -t vnd.android.cursor.dir/contact -e name '" + name + "' -e phone " + phoneNumber);
             process.waitFor();
@@ -190,6 +230,5 @@ public class JADBExample {
     // getNotificationSMS
     // getNotificationCall
     // readExtractContacts
-
 
 }
