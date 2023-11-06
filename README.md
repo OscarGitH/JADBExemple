@@ -17,7 +17,7 @@ L'utilisation de IntelliJ IDEA est recommandée
 7. Observer les résultats dans la console
 
 ## Attention
-La méthode addContact est en cours de développement et ne fonctionne pas encore.  
-Ne pas mettre en commentaire les méthode startADBServer et closeADBServer.  
+Ne pas mettre en commentaire les méthode startADBServer et closeADBServer. 
+Certaines méthodes sont en cours de développement et ne fonctionnent pas encore.
 Si vous avez beaucoup de SMS, la méthode extractSMS peut prendre du temps à s'exécuter.  
 Si vous avez beaucoup de contacts, la méthode extractContacts peut prendre du temps à s'exécuter.  
