@@ -40,7 +40,7 @@ public class JADBExample {
 
 // En cours de développement --------------------------------------------------------------------------------
             // Exemple d'extraction des notifications
-            // getNotifications(device);
+            // getNotificationsCall(device);
 
             // Exemple d'ajout d'un contact
             // addContact("Jean Louis", "11 11 11 11 11");
@@ -144,8 +144,9 @@ public class JADBExample {
             System.out.println(e.getMessage());
         }
     }
+
 // En cours de développement --------------------------------------------------------------------------------
-    public static void getNotifications(JadbDevice device) throws IOException {
+    public static void getNotificationsCall(JadbDevice device) throws IOException {
         List<String> notifications = new ArrayList<>();
         // Exécutez les commandes ADB pour obtenir les notifications et ajoutez-les à la liste
         try {
@@ -183,4 +184,12 @@ public class JADBExample {
             System.out.println(e.getMessage());
         }
     }
+
+// Méthode à prévoir ----------------------------------------------------------------------------------------
+    // readExtractSMS
+    // getNotificationSMS
+    // getNotificationCall
+    // readExtractContacts
+
+
 }
