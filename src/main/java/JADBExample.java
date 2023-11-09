@@ -20,11 +20,17 @@ public class JADBExample {
             }
 
             // Exemple d'envoi de SMS (il faut une carte SIM donc sur VM ça ne marche pas)
-            System.out.println("Envoi d'un SMS");
-            sendSMS(device, "0782239208", "Ceci\\ est\\ un\\ exemple\\ de\\ SMS\\ envoy\u00e9\\ via\\ JADB.");
+            // System.out.println("Envoi d'un SMS");
+            // sendSMS(device, "0782239208", "Ceci\\ est\\ un\\ exemple\\ de\\ SMS\\ envoy\u00e9\\ via\\ JADB.");
 
             // Exemple d'extraction des SMS
             // System.out.println("Extraction des SMS");extractSMS(device, "sms.txt");
+
+            // Exemple de récupération des SMS non lus
+            System.out.println("Récupération des SMS non lus");getUnreadSMS(device);
+
+            // Exemple de récupération des conversations SMS
+            // System.out.println("Récupération des conversations SMS");SMSConversation(device, "0782239208");
 
             // Exemple d'appel téléphonique sortant
             // System.out.println("Appel téléphonique sortant");makePhoneCall(device, "0782239208");
@@ -105,6 +111,51 @@ public class JADBExample {
             System.out.println(e.getMessage());
         }
     }
+
+    public static void getUnreadSMS(JadbDevice device) {
+        try {
+            ProcessBuilder processBuilder = new ProcessBuilder("adb", "-s", device.getSerial(), "shell", "content", "query", "--uri", "content://sms/inbox", "--projection", "address,body", "--where", "read=0");
+            processBuilder.redirectErrorStream(true);
+            Process process = processBuilder.start();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+
+            process.waitFor();
+            reader.close();
+
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void SMSConversation(JadbDevice device, String phoneNumber) throws IOException {
+        String serialNumber = device.getSerial();
+        try {
+            boolean startApp = false;
+            // Vérifiez si l'application est déjà en cours d'exécution avec une récursivité
+            while (!isAppRunning(serialNumber)) {
+                if (!startApp) {
+                    // L'application n'est pas en cours d'exécution, lancez-la
+                    String startServiceCmd = String.format("adb -s %s shell am start -n com.example.myapplication/com.example.myapplication.MainActivity", serialNumber);
+                    Process startServiceProcess = Runtime.getRuntime().exec(startServiceCmd);
+                    startServiceProcess.waitFor();
+                    startApp = true;
+                }
+            }
+
+            // Exécutez la requête ADB pour récupérer la conversation SMS
+
+
+        } catch (InterruptedException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+
 
     // Module Appel -----------------------------------------------------------------------------------------------
     public static void makePhoneCall(JadbDevice device, String phoneNumber) throws IOException {
@@ -267,7 +318,6 @@ public class JADBExample {
         int exitCode = process.waitFor();
         return exitCode == 0;
     }
-
 
 // Méthode à prévoir ----------------------------------------------------------------------------------------
     // readExtractSMS
