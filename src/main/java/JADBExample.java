@@ -25,7 +25,7 @@ public class JADBExample {
 // Module Contacts -------------------------------------------------------------------------------------------
             //extractContact(device, "contacts.txt");
             //System.out.println(searchByNumberContact(device, "0782239208"));
-            //System.out.println(searchByNameContact(device, "Dupont"));
+            //System.out.println(searchByNameContact(device, "Jean"));
             //addContact(device, "Jean", "Dupont", "0782239208");
 
 // Module Application ----------------------------------------------------------------------------------------
@@ -75,10 +75,31 @@ public class JADBExample {
     public static JadbDevice getDevice() throws IOException, InterruptedException, JadbException {
         JadbConnection jadb = new JadbConnection();
         JadbDevice device = jadb.getDevices().get(0);
+        String serialNumber = device.getSerial();
+
         if (device == null) {
             System.out.println("Aucun appareil connecté");
         } else {
             System.out.println("Appareil connecté : " + device.getSerial());
+
+            // Utiliser la commande adb shell avec un script pour extraire dynamiquement le nom
+            String script = "dumpsys bluetooth_manager | grep 'name:'";
+            ProcessBuilder processBuilder = new ProcessBuilder(
+                    "adb", "-s", serialNumber, "shell", script
+            );
+
+            processBuilder.redirectErrorStream(true);
+            Process process = processBuilder.start();
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+
+            process.waitFor();
+            reader.close();
         }
         return device;
     }
