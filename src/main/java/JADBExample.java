@@ -12,8 +12,8 @@ public class JADBExample {
             JadbDevice device = getDevice();
 
 // Module SMS ------------------------------------------------------------------------------------------------
-            //sendSMS(device, "0782239208", "Ceci\\ est\\ un\\ exemple\\ de\\ SMS\\ envoy\u00e9\\ via\\ JADB.");
-            //extractSMS(device, "sms.txt", "0782239208");
+            // sendSMS(device, "0782239208", "Ceci\\ est\\ un\\ exemple\\ de\\ SMS\\ envoy\u00e9\\ via\\ JADB.");
+            // extractSMS(device, "sms.txt", "0782239208");
             //getUnreadSMS(device);
 
 // Module Appel ----------------------------------------------------------------------------------------------
@@ -113,11 +113,11 @@ public class JADBExample {
      * @param message
      * @throws IOException
      */
-    public static void sendSMS(JadbDevice device, String phoneNumber, String message) throws IOException {
+    public static void sendSMS(JadbDevice device, String phoneNumber, String message) {
         String serialNumber = device.getSerial();
         try {
-            boolean startApp = false;
-            // Vérifiez si l'application est déjà en cours d'exécution avec une récursivité
+        boolean startApp = false;
+        // Vérifiez si l'application est déjà en cours d'exécution avec une récursivité
             while (isAppRunning(serialNumber)) {
                 if (!startApp) {
                     // L'application n'est pas en cours d'exécution, lancez-la
@@ -132,14 +132,12 @@ public class JADBExample {
             Process startServiceProcess = Runtime.getRuntime().exec(startServiceCmd);
             startServiceProcess.waitFor();
 
-
-            /*ad
+            /*
             ProcessBuilder processBuilder = new ProcessBuilder("adb", "-s", serialNumber, "shell", "service", "call", "isms", "5","i32", "1", "s16", "com.android.mms", "s16", "null", "s16", phoneNumber, "s16", "null", "s16", message, "s16", "null", "s16", "null", "i32", "0", "i64", "0");
             Process process = processBuilder.start();
             process.waitFor();
             */
-
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             System.out.println(e.getMessage());
         }
     }
@@ -155,17 +153,21 @@ public class JADBExample {
         try {
             String serialNumber = device.getSerial();
             ProcessBuilder processBuilder;
-
-            processBuilder = new ProcessBuilder("adb", "-s", serialNumber, "shell", "content", "query", "--uri", "content://sms");
-
-
-            processBuilder.redirectOutput(new File(fileName));
-            Process process = processBuilder.start();
-            process.waitFor();
+            Process process;
 
             // Filtrer les résultats avec busybox grep si un numéro est spécifié
             if (phoneNumber != null ) {
-                filterResultsSMS(fileName, phoneNumber);
+                processBuilder = new ProcessBuilder("adb", "-s", serialNumber, "shell", "content", "query", "--uri", "content://sms", "--projection", "_id,address,date,body,", "--where", "address='" + phoneNumber + "'");
+                processBuilder.redirectOutput(new File(phoneNumber + "_sms.txt"));
+                processBuilder.redirectErrorStream(true);
+                process = processBuilder.start();
+                process.waitFor();
+
+            } else {
+                processBuilder = new ProcessBuilder("adb", "-s", serialNumber, "shell", "content", "query", "--uri", "content://sms", "--projection", "_id,address,date,body");
+                processBuilder.redirectOutput(new File("sms.txt"));
+                process = processBuilder.start();
+                process.waitFor();
             }
         } catch (IOException | InterruptedException e) {
             System.out.println(e.getMessage());
